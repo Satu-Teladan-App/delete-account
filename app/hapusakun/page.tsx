@@ -1,193 +1,92 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@/providers/auth-provider";
-import { useRouter } from "next/navigation";
-import { Loader2, AlertTriangle, ShieldCheck, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
-import { submitDeletionRequest } from "@/lib/api/account-deletion";
+import { useAuth } from "@/providers/auth-provider";
+import { getDeletionRequestStatus, submitDeletionRequest } from "@/lib/api/account-deletion";
+
+const statuses: Record<string, string> = {
+  pending: "Menunggu peninjauan", approved: "Disetujui", rejected: "Ditolak",
+  processing: "Sedang diproses", completed: "Selesai", cancelled: "Dibatalkan",
+};
 
 export default function HapusAkunPage() {
-  const { user, isLoading, setIsPortal, setActiveTab } = useAuth();
-  const router = useRouter();
+  const { user, isLoading, signOut } = useAuth();
   const [reason, setReason] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [confirmStep, setConfirmStep] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [requests, setRequests] = useState<Awaited<ReturnType<typeof getDeletionRequestStatus>>>([]);
+  const [loadingStatus, setLoadingStatus] = useState(false);
 
   useEffect(() => {
-    setIsPortal(true);
-    setActiveTab("account"); // Optional: set a different tab or keep it consistent
-  }, [setIsPortal, setActiveTab]);
+    let active = true;
+    setRequests([]);
+    if (!user) return;
+    setLoadingStatus(true);
+    getDeletionRequestStatus().then(data => { if (active) setRequests(data); })
+      .catch(() => { if (active) setError("Status belum dapat dimuat. Muat ulang halaman sebelum mengirim permintaan baru."); })
+      .finally(() => { if (active) setLoadingStatus(false); });
+    return () => { active = false; };
+  }, [user]);
 
-  useEffect(() => {
-    if (!isLoading && !user) {
-      router.push("/auth/login?redirect=/hapusakun");
-    }
-  }, [user, isLoading, router]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center font-sans">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="animate-spin text-[#002587] opacity-20" size={32} strokeWidth={1.5} />
-          <p className="text-[10px] font-bold text-gray-300">MEMUAT...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) return null;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reason.trim()) {
-      setError("Mohon berikan alasan penghapusan akun.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError(null);
-
+  const pending = requests.some(r => ["pending", "approved", "processing"].includes(r.status));
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!user || !confirmed || submitting || pending) return;
+    setSubmitting(true);
+    setError("");
     try {
-      await submitDeletionRequest({
-        email: user.email || "",
-        reason: reason,
-      });
-      setIsSuccess(true);
-    } catch (err: any) {
-      setError(err.message || "Gagal mengirim permintaan penghapusan akun.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  if (isSuccess) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center px-6">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full text-center space-y-8"
-        >
-          <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto shadow-sm shadow-green-100">
-             <ShieldCheck size={40} />
-          </div>
-          <div className="space-y-4">
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">Permintaan Terkirim</h1>
-            <p className="text-gray-500 leading-relaxed text-sm">
-              Permintaan penghapusan akun Anda sedang diproses oleh tim admin Satu Teladan. 
-              Mohon tunggu konfirmasi lebih lanjut melalui email.
-            </p>
-          </div>
-          <Link 
-            href="/" 
-            className="inline-flex items-center gap-2 text-[10px] font-bold text-[#002587] uppercase tracking-[0.2em] border-b border-[#002587]/20 pb-1 hover:border-[#002587] transition-all"
-          >
-            Kembali ke Beranda
-          </Link>
-        </motion.div>
-      </div>
-    );
+      await submitDeletionRequest({ email: user.email || "", reason: reason.trim() || "Permintaan penghapusan akun dan data terkait melalui halaman web." });
+      setSuccess(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Permintaan belum terkirim. Silakan coba lagi.");
+    } finally { setSubmitting(false); }
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50 font-sans py-20 px-6">
-      <div className="max-w-xl mx-auto space-y-8">
-        <Link 
-          href="/" 
-          className="inline-flex items-center gap-2 text-[10px] font-bold text-gray-400 hover:text-[#002587] transition-all uppercase tracking-widest group"
-        >
-          <ArrowLeft size={14} className="transition-transform group-hover:-translate-x-1" />
-          Batal & Kembali
-        </Link>
-
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-[32px] border border-gray-100 shadow-xl shadow-gray-200/50 overflow-hidden"
-        >
-          <div className="p-8 md:p-12 space-y-10">
-            <div className="space-y-4">
-              <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center shadow-sm shadow-red-100 mb-8">
-                <AlertTriangle size={32} />
-              </div>
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900">Penghapusan Akun</h1>
-              <p className="text-gray-500 leading-relaxed text-sm">
-                Kami sedih melihat Anda pergi. Harap perhatikan bahwa penghapusan akun akan menghilangkan seluruh data profil, 
-                riwayat tiket, dan akses Anda ke aplikasi Satu Teladan secara permanen.
-              </p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-8">
-              <div className="space-y-3">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">
-                  Alasan Penghapusan
-                </label>
-                <textarea
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="Mengapa Anda ingin menghapus akun Anda?"
-                  className="w-full min-h-[160px] p-5 bg-gray-50 border border-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#002587]/5 focus:border-[#002587]/20 transition-all resize-none font-medium placeholder:text-gray-300"
-                  required
-                />
-              </div>
-
-              {error && (
-                <div className="p-4 bg-red-50 border border-red-100 rounded-xl text-red-500 text-xs font-medium animate-shake">
-                  {error}
-                </div>
-              )}
-
-              <div className="pt-2">
-                {!confirmStep ? (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmStep(true)}
-                    className="w-full py-5 bg-red-500 text-white rounded-2xl font-bold text-[11px] tracking-[0.2em] hover:bg-red-600 transition-all shadow-lg shadow-red-100 flex items-center justify-center gap-3"
-                  >
-                    MINTA PENGHAPUSAN AKUN
-                  </button>
-                ) : (
-                  <div className="space-y-4">
-                    <p className="text-[10px] font-bold text-red-500 text-center uppercase tracking-widest">
-                      Konfirmasi: Apakah Anda benar-benar yakin?
-                    </p>
-                    <div className="flex gap-4">
-                      <button
-                        type="button"
-                        onClick={() => setConfirmStep(false)}
-                        className="flex-1 py-5 bg-gray-100 text-gray-400 rounded-2xl font-bold text-[11px] tracking-[0.2em] hover:bg-gray-200 transition-all"
-                      >
-                        TIDAK, BATAL
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="flex-1 py-5 bg-red-500 text-white rounded-2xl font-bold text-[11px] tracking-[0.2em] hover:bg-red-600 transition-all shadow-lg shadow-red-100 flex items-center justify-center gap-3 disabled:opacity-50"
-                      >
-                        {isSubmitting ? (
-                          <Loader2 className="animate-spin" size={16} />
-                        ) : (
-                          "YA, HAPUS AKUN"
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </form>
+    <div className="mx-auto max-w-2xl px-5 py-10 sm:py-16">
+      <header className="mb-10 border-b border-slate-200 pb-5">
+        <Link href="/" className="text-lg font-bold text-[#002587]">Satu Teladan</Link>
+        <p className="mt-1 text-sm text-slate-600">Pengelolaan akun dan data pribadi</p>
+      </header>
+      <h1 className="text-3xl font-bold tracking-tight text-[#002587]">Hapus akun</h1>
+      <p className="mt-4 leading-7 text-slate-700">Ajukan penghapusan akun Satu Teladan dan data yang terkait dengan akun Anda. Anda dapat mengajukan melalui halaman ini tanpa membuka aplikasi.</p>
+      <section aria-labelledby="proses" className="mt-8 space-y-4">
+        <h2 id="proses" className="text-xl font-semibold">Cara mengajukan</h2>
+        <ol className="list-decimal space-y-2 pl-5 leading-7 text-slate-700">
+          <li>Masuk dengan akun Satu Teladan untuk memverifikasi kepemilikan akun.</li>
+          <li>Baca informasi di bawah, lalu kirim permintaan penghapusan.</li>
+          <li>Admin meninjau permintaan. Pantau statusnya pada halaman ini setelah masuk.</li>
+        </ol>
+        <p className="leading-7 text-slate-700">Pengajuan tidak langsung menghapus akun. Status disetujui berarti permintaan diterima untuk diproses; penghapusan baru selesai ketika status menjadi Selesai.</p>
+      </section>
+      <section aria-labelledby="data" className="my-8 border-y border-slate-200 py-6">
+        <h2 id="data" className="text-xl font-semibold">Data yang terkait dengan permintaan</h2>
+        <p className="mt-3 leading-7 text-slate-700">Permintaan mencakup akun masuk dan data profil pribadi Anda. Riwayat pesan, keanggotaan, kontribusi, serta konten yang terkait dengan pengguna lain perlu ditinjau admin sebelum dihapus atau dianonimkan.</p>
+        <p className="mt-3 leading-7 text-slate-700">Rincian data yang wajib disimpan, alasan penyimpanan, serta jangka waktu pemrosesan dan retensi belum ditetapkan pada halaman ini. Informasi tersebut perlu dikonfirmasi pengelola sebelum penghapusan diselesaikan.</p>
+      </section>
+      <section aria-labelledby="permintaan">
+        <h2 id="permintaan" className="text-xl font-semibold">Permintaan penghapusan</h2>
+        {isLoading ? <p className="mt-4" role="status">Memeriksa sesi akun…</p> : !user ? (
+          <div className="mt-4">
+            <p className="mb-5 leading-7 text-slate-700">Masuk untuk memastikan permintaan hanya dibuat oleh pemilik akun.</p>
+            <Link href="/auth/login?redirect=/hapusakun" className="inline-flex min-h-11 items-center rounded-lg bg-[#002587] px-5 py-3 font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-4">Masuk untuk mengajukan</Link>
           </div>
-          
-          <div className="bg-gray-50 p-8 border-t border-gray-100 text-center">
-            <p className="text-gray-300 text-[10px] font-bold uppercase tracking-[0.3em]">
-              Akun aktif: {user.email}
-            </p>
-          </div>
-        </motion.div>
-      </div>
+        ) : <div className="mt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm"><p>Akun: <strong>{user.email}</strong></p><button onClick={() => void signOut()} className="min-h-11 text-[#002587] underline">Keluar</button></div>
+          {loadingStatus && <p role="status">Memuat status permintaan…</p>}
+          {requests.length > 0 && <ul className="my-4 space-y-2">{requests.map(r => <li key={r.id} className="rounded-lg border border-slate-200 p-4"><strong>{statuses[r.status] || r.status}</strong><p className="mt-1 text-sm text-slate-600">Diajukan {new Date(r.requested_at).toLocaleDateString("id-ID")}</p></li>)}</ul>}
+          {success ? <p role="status" className="mt-5 rounded-lg bg-slate-100 p-5 leading-7">Permintaan diterima dan akan ditinjau admin. Akun belum dihapus. Anda dapat kembali ke halaman ini untuk memeriksa status.</p> : !pending && <form onSubmit={submit} className="mt-5 space-y-5">
+            <div><label htmlFor="reason" className="block font-medium">Alasan (opsional)</label><textarea id="reason" value={reason} onChange={e => setReason(e.target.value)} maxLength={2000} rows={4} className="mt-2 w-full rounded-lg border border-slate-300 p-3 focus:outline-2 focus:outline-[#002587]" /></div>
+            <label className="flex items-start gap-3 leading-6"><input type="checkbox" required checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="mt-1 h-5 w-5 accent-[#002587]" /><span>Saya mengajukan penghapusan akun dan memahami bahwa akun yang telah dihapus tidak dapat dipulihkan.</span></label>
+            <button type="submit" disabled={submitting || loadingStatus || !confirmed || Boolean(error)} className="min-h-11 rounded-lg bg-[#002587] px-5 py-3 font-semibold text-white disabled:opacity-50">{submitting ? "Mengirim…" : "Ajukan penghapusan akun"}</button>
+          </form>}
+        </div>}
+        {error && <div role="alert" className="mt-4 text-red-700"><p>{error}</p><button onClick={() => window.location.reload()} className="mt-2 min-h-11 underline">Muat ulang halaman</button></div>}
+      </section>
+      <footer className="mt-12 border-t border-slate-200 pt-5 text-sm text-slate-600"><Link href="/privacy" className="inline-block py-2 text-[#002587] underline">Kebijakan Privasi</Link></footer>
     </div>
   );
 }

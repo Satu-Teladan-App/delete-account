@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       .from("account_deletion_requests")
       .select("*")
       .eq("user_id", user.id)
-      .eq("status", "pending")
+      .in("status", ["pending", "approved", "processing"])
       .single();
 
     if (checkError && checkError.code !== "PGRST116") {
@@ -115,8 +115,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Send email notification to user
-    // TODO: Send notification to admin team
 
     return NextResponse.json({
       success: true,

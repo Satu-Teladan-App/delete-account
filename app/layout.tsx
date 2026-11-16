@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Outfit } from "next/font/google"; // Updated fonts
+import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 
 const interFont = Inter({
@@ -13,8 +13,8 @@ const outfitFont = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "Satu Teladan Portal",
-  description: "Support & Forum Portal Satu Teladan",
+  title: "Hapus Akun — Satu Teladan",
+  description: "Ajukan dan pantau permintaan penghapusan akun Satu Teladan.",
   icons: {
     icon: [
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
