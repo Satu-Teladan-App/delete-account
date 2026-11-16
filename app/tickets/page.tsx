@@ -18,7 +18,7 @@ export default function TicketsPage() {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      router.push("/auth/login");
+      router.replace(`/auth/login?redirect=${encodeURIComponent('/tickets' + window.location.search)}`);
     }
   }, [user, isLoading, router]);
 

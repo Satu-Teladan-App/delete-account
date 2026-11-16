@@ -1,0 +1,5 @@
+project_id = "satu-teladan"
+
+[functions.push-dispatch]
+# This server-only worker authenticates its scheduler with PUSH_DISPATCH_SECRET.
+verify_jwt = false

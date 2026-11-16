@@ -43,6 +43,8 @@ export interface TicketItem {
     name: string;
     avatar: string | null;
     batch: string | null;
+    batch_status?: string | null;
+    graduation_year?: number | null;
   } | null;
 }
 
@@ -88,7 +90,7 @@ export const fetchUserTickets = async (
     return (data ?? []) as TicketItem[];
   } catch (error) {
     console.error("Error fetching tickets:", error);
-    return [];
+    throw error;
   }
 };
 
@@ -153,11 +155,6 @@ export const fetchAllTickets = async (
       .select(
         `
         *,
-        user_alumni:alumni!user_id (
-          name,
-          avatar,
-          batch
-        ),
         replies:ticket_replies (
           id, ticket_id, user_id, message, is_admin_reply, created_at, updated_at
         )
@@ -171,10 +168,17 @@ export const fetchAllTickets = async (
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data ?? []) as TicketItem[];
+    const tickets = (data ?? []) as TicketItem[];
+    const ids = [...new Set(tickets.map((ticket) => ticket.user_id))];
+    if (!ids.length) return [];
+    const { data: profiles, error: profileError } = await db().from("alumni")
+      .select("user_id, name, avatar, batch, batch_status, graduation_year").in("user_id", ids);
+    if (profileError) throw profileError;
+    const byUser = new Map((profiles ?? []).map((profile: { user_id: string }) => [profile.user_id, profile]));
+    return tickets.map((ticket) => ({ ...ticket, user_alumni: byUser.get(ticket.user_id) ?? null })) as TicketItem[];
   } catch (error) {
     console.error("Error fetching all tickets:", error);
-    return [];
+    throw error;
   }
 };
 
@@ -193,7 +197,7 @@ export const updateTicketStatus = async (
     const payload: Record<string, unknown> = { ...updates };
     if (updates.status === "closed" || updates.status === "resolved") {
       payload.resolved_at = new Date().toISOString();
-    } else {
+    } else if (updates.status !== undefined) {
       payload.resolved_at = null;
     }
 
@@ -262,7 +266,7 @@ export const fetchTicketReplies = async (
     return (data ?? []) as TicketReply[];
   } catch (error) {
     console.error("Error fetching replies:", error);
-    return [];
+    throw error;
   }
 };
 
@@ -283,7 +287,7 @@ export const fetchForumPosts = async (): Promise<ForumPost[]> => {
           id,
           name,
           avatar,
-          batch
+          batch, batch_status, graduation_year
         )
       `,
       )

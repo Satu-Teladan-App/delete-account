@@ -11,7 +11,7 @@ export const fetchDonasiData = async (limit = 10) => {
           id,
           name,
           avatar,
-          batch
+          batch, batch_status, graduation_year
         ),
         donasi_verification(
           id,

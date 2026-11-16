@@ -11,7 +11,7 @@ export const fetchBeritaData = async (limit = 10) => {
           id,
           name,
           avatar,
-          batch
+          batch, batch_status, graduation_year
         )
       `)
       .order('created_at', { ascending: false })

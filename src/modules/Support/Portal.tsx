@@ -243,7 +243,16 @@ export default function SupportPortal({
   const [activeTab, setActiveTab] = useState<"requests" | "delete-account">("requests");
   const [tickets, setTickets] = useState<TicketItem[]>([]);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [ticketLinkApplied, setTicketLinkApplied] = useState(false);
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('ticket_id');
+    if (!ticketLinkApplied && id && tickets.some(ticket => ticket.id === id)) {
+      setSelectedTicketId(id);
+      setTicketLinkApplied(true);
+    }
+  }, [tickets, ticketLinkApplied]);
   const [isLoading, setIsLoading] = useState(true);
+  const [ticketsError, setTicketsError] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   
   const [newSubject, setNewSubject] = useState("");
@@ -271,11 +280,13 @@ export default function SupportPortal({
 
   const fetchTickets = async () => {
     setIsLoading(true);
+    setTicketsError("");
     try {
       const data = await fetchUserTickets(user.id);
       setTickets(data);
     } catch (err) {
       console.error("Error fetching tickets:", err);
+      setTicketsError("Tiket belum dapat dimuat. Data ini belum dapat dinyatakan kosong.");
     } finally {
       setIsLoading(false);
     }
@@ -312,8 +323,8 @@ export default function SupportPortal({
         reason: delReason.trim(),
       });
       setIsDelSuccess(true);
-    } catch (err: any) {
-      setDelError(err.message || "Gagal mengirim permintaan");
+    } catch (err: unknown) {
+      setDelError(err instanceof Error ? err.message : "Gagal mengirim permintaan");
     } finally {
       setIsDelLoading(false);
     }
@@ -428,6 +439,10 @@ export default function SupportPortal({
                         <div className="py-32 flex flex-col items-center gap-4">
                            <Loader2 className="animate-spin text-blue-200" size={40} strokeWidth={1.5} />
                            <p className="text-xs font-bold text-gray-300">Mengakses catatan</p>
+                        </div>
+                      ) : ticketsError ? (
+                        <div role="alert" className="p-6 border border-red-200 rounded-lg text-red-800">
+                          <p>{ticketsError}</p><button type="button" onClick={fetchTickets} className="mt-3 underline p-2">Coba lagi</button>
                         </div>
                       ) : tickets.length === 0 ? (
                         <div className="py-40 bg-white border border-dashed border-gray-200 rounded-3xl flex flex-col items-center gap-6 grayscale opacity-40">

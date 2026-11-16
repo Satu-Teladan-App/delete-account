@@ -14,11 +14,12 @@ import {
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { safeInternalRedirect } from "@/lib/redirect";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") || "/";
+  const redirectTo = safeInternalRedirect(searchParams.get("redirect"));
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -138,7 +139,7 @@ function LoginForm() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label className="block text-[10px] font-bold text-gray-400 mb-4">Alamat Email</label>
+                <label htmlFor="email" className="block text-xs font-bold text-gray-700 mb-4">Alamat Email</label>
                 <div className="relative">
                   <Mail className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
                   <input
@@ -154,7 +155,7 @@ function LoginForm() {
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-gray-400 mb-4">Kata Sandi</label>
+                <label htmlFor="password" className="block text-xs font-bold text-gray-700 mb-4">Kata Sandi</label>
                 <div className="relative">
                   <Lock className="absolute left-0 top-1/2 -translate-y-1/2 text-gray-300" size={16} />
                   <input
@@ -168,6 +169,7 @@ function LoginForm() {
                   />
                   <button
                     type="button"
+                    aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-300 hover:text-[#002587] transition-colors"
                   >

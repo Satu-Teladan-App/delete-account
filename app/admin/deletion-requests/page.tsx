@@ -15,7 +15,7 @@ interface DeletionRequest {
   status: string;
   requested_at: string;
   processed_at: string | null;
-  metadata: any;
+  metadata: unknown;
 }
 
 export default function AdminDeletionRequestsPage() {
@@ -200,12 +200,7 @@ export default function AdminDeletionRequestsPage() {
                       </div>
                     )}
                     {request.status === "approved" && (
-                      <button
-                        onClick={() => processRequest(request.id, "completed")}
-                        className="px-3 py-1 bg-gray-900 text-white rounded hover:bg-gray-800 text-xs font-semibold"
-                      >
-                        Complete
-                      </button>
+                      <p className="text-xs text-gray-700 max-w-xs">Disetujui; akun belum dihapus. Penyelesaian menunggu proses penghapusan backend terverifikasi.</p>
                     )}
                   </td>
                 </tr>

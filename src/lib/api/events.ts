@@ -11,7 +11,7 @@ export const fetchKegiatanData = async (limit = 10) => {
           id,
           name,
           avatar,
-          batch
+          batch, batch_status, graduation_year
         ),
         kegiatan_verification(
           id,

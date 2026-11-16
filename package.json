@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:product": "node --test scripts/test-product-api.cjs",
+    "test:product-db": "node scripts/test-product-data.mjs",
+    "test:push": "node --test scripts/test-push-dispatch.mjs scripts/test-push-worker-api.cjs",
+    "test:push-db": "node scripts/test-notifications-db.mjs",
+    "test:identity-db": "node scripts/test-profile-identity-db.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",

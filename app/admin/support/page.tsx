@@ -1,5 +1,7 @@
 "use client";
 
+import { formatProfileIdentity } from '@/lib/profileIdentity';
+
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import {
@@ -301,6 +303,7 @@ function TicketDetailPanel({
 export default function AdminSupportPage() {
   const [tickets, setTickets] = useState<TicketItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [statusFilter, setStatusFilter] = useState<TicketStatus | "all">("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [adminUserId, setAdminUserId] = useState<string>("");
@@ -317,11 +320,14 @@ export default function AdminSupportPage() {
 
   const loadTickets = async () => {
     setLoading(true);
+    setLoadError("");
+    try {
     const data = await fetchAllTickets(
       statusFilter === "all" ? undefined : statusFilter,
     );
     setTickets(data);
-    setLoading(false);
+    } catch { setLoadError("Tiket belum dapat dimuat. Periksa koneksi atau akses admin."); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => {
@@ -335,11 +341,14 @@ export default function AdminSupportPage() {
   useEffect(() => {
     (async () => {
       setLoading(true);
+      setLoadError("");
+      try {
       const data = await fetchAllTickets(
         statusFilter === "all" ? undefined : statusFilter,
       );
       setTickets(data);
-      setLoading(false);
+      } catch { setLoadError("Tiket belum dapat dimuat. Periksa koneksi atau akses admin."); }
+      finally { setLoading(false); }
     })();
   }, [statusFilter]);
 
@@ -437,6 +446,10 @@ export default function AdminSupportPage() {
               Memuat Tiket...
             </p>
           </div>
+        ) : loadError ? (
+          <div role="alert" className="p-6 border border-red-200 rounded-lg text-red-800">
+            <p>{loadError}</p><button type="button" onClick={loadTickets} className="mt-3 underline p-2">Coba lagi</button>
+          </div>
         ) : filteredTickets.length === 0 ? (
           <div className="text-center py-24 bg-white border border-dashed border-gray-200 rounded-lg">
             <AlertCircle className="w-10 h-10 text-gray-300 mx-auto mb-4" />
@@ -484,9 +497,9 @@ export default function AdminSupportPage() {
                         <span className="text-xs font-bold text-gray-800">
                           {ticket.user_alumni?.name ?? "Pengguna"}
                         </span>
-                        {ticket.user_alumni?.batch && (
+                        {ticket.user_alumni && (
                           <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                            Ang. {ticket.user_alumni.batch}
+                            {formatProfileIdentity(ticket.user_alumni)}
                           </span>
                         )}
                         <span className="text-[10px] text-gray-300">•</span>

@@ -1,3 +1,4 @@
+import { hasProfileIdentity, profileIdentityFields } from '../profileIdentity';
 import { getSupabaseBrowserClient } from "../supabase/client";
 
 /**
@@ -31,6 +32,8 @@ export const fetchUserProfile = async () => {
         avatar: alumni.avatar,
         email: user.email,
         batch: alumni.batch,
+        batch_status: alumni.batch_status,
+        graduation_year: alumni.graduation_year,
       };
     }
 
@@ -108,7 +111,6 @@ export const saveAlumniData = async (alumniData: any) => {
       {
         user_id: user.id,
         email: user.email,
-        updated_at: new Date().toISOString(),
       },
       {
         onConflict: 'user_id',
@@ -126,14 +128,17 @@ export const saveAlumniData = async (alumniData: any) => {
       .eq('user_id', user.id)
       .single();
 
+    const identityInput = alumniData.batch !== undefined && alumniData.batch_status === undefined && alumniData.graduation_year === undefined
+      ? alumniData : { ...existingAlumni, ...alumniData };
+    const identity = profileIdentityFields(identityInput || {});
     const alumniRecord = {
       user_id: user.id,
       name: alumniData.name,
-      full_name: alumniData.name,
-      batch: alumniData.batch,
+      full_name: alumniData.full_name ?? existingAlumni?.full_name ?? alumniData.name,
+      ...identity,
       avatar: alumniData.avatar || null,
-      latitude: alumniData.latitude || null,
-      longitude: alumniData.longitude || null,
+      latitude: alumniData.latitude ?? null,
+      longitude: alumniData.longitude ?? null,
       socials: alumniData.socials || null,
       domisili: alumniData.domisili || null,
       updated_at: new Date().toISOString(),
@@ -196,13 +201,7 @@ export const checkBiodataCompletion = async () => {
       return false;
     }
 
-    // Check if required fields are filled (name and batch as per Frontend)
-    const requiredFields = ['name', 'batch'];
-    const isComplete = requiredFields.every(
-      (field) => (alumni as any)[field] && (alumni as any)[field].toString().trim() !== '',
-    );
-
-    return isComplete;
+    return hasProfileIdentity(alumni);
   } catch (error) {
     console.error('Error checking biodata completion:', error);
     return false;

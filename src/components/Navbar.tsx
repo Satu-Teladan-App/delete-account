@@ -1,15 +1,23 @@
 "use client";
 
+import { formatProfileIdentity } from '@/lib/profileIdentity';
+
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { LogOut, User as UserIcon, Menu, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import type { User } from "@supabase/supabase-js";
 
 interface NavbarProps {
-  user?: any;
-  profile?: any;
+  user?: Pick<User, "id"> | null;
+  profile?: {
+    name?: string | null;
+    avatar?: string | null;
+    batch?: string | null;
+    batch_status?: string | null;
+    graduation_year?: number | null;
+  } | null;
   onSignOut?: () => void;
   isPortal?: boolean;
   activeTab?: string;
@@ -39,7 +47,7 @@ export default function Navbar({
 
   const scrollToSection = (href: string) => {
     if (!isLandingPage) {
-      window.location.href = `/${href}`;
+      window.location.assign(`/${href}`);
       return;
     }
     const element = document.querySelector(href);
@@ -104,7 +112,7 @@ export default function Navbar({
                       {profile?.name}
                     </span>
                     <span className="text-sm font-medium text-gray-400">
-                       {profile?.batch ? `Angkatan ${profile.batch}` : "Anggota"}
+                       {formatProfileIdentity(profile)}
                     </span>
                   </div>
                 </div>
